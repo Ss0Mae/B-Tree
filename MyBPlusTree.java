@@ -19,28 +19,38 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 			List<Integer> keys = current.getKeyList();
 			List<MyBPlusTreeNode> children = current.getChildren();
 			int i = 0;
+
+			// 키 비교 및 중간 과정 출력
 			while (i < keys.size() && key >= keys.get(i)) {
 				i++;
 			}
-			if (i < keys.size() && key < keys.get(i)) {
-				System.out.println("> less than " + keys.get(i));
-			} else if (i > 0) {
-				System.out.println("> larger than or equal to " + keys.get(i - 1));
-			} else {
-				System.out.println("> larger than or equal to " + keys.get(0));
+
+			if (i < keys.size()) {
+				System.out.println("less than " + keys.get(i));
 			}
+			if (i > 0) {
+				System.out.println("larger than or equal to " + keys.get(i - 1));
+			} else {
+				System.out.println("larger than or equal to " + keys.get(0));
+			}
+
+			// 다음 노드로 이동
 			current = children.get(i);
 		}
 
+		// 리프 노드에서 키 검색 및 출력
 		int idx = Collections.binarySearch(current.getKeyList(), key);
 		if (idx >= 0) {
-			System.out.println("> " + key + " found");
+			System.out.println(key + " found");
 			return current;
 		} else {
-			System.out.println("> " + key + " not found");
+			System.out.println(key + " not found");
 			return null;
 		}
 	}
+
+
+
 
 	public void inorderTraverse() {
 		inorderTraverse(root);
@@ -49,14 +59,14 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 	private void inorderTraverse(MyBPlusTreeNode node) {
 		if (node.isLeaf()) {
 			for (Integer key : node.getKeyList()) {
-				System.out.println(key);
+				System.out.print(key + " ");
 			}
 		} else {
 			List<MyBPlusTreeNode> children = node.getChildren();
 			List<Integer> keys = node.getKeyList();
 			for (int i = 0; i < keys.size(); i++) {
 				inorderTraverse(children.get(i));
-				System.out.println(keys.get(i));
+				System.out.print(keys.get(i) + " ");
 			}
 			inorderTraverse(children.get(keys.size()));
 		}
@@ -65,182 +75,19 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 	@Override
 	public boolean add(Integer e) {
 		MyBPlusTreeNode leaf = findLeafNode(e);
-		if (leaf.getKeyList().contains(e)) {
-			return false; // 이미 존재하는 키는 추가하지 않음
-		}
 		leaf.addKey(e);
-		if (leaf.getKeyList().size() >= m) {
-			splitLeafNode(leaf);
+		if (leaf.getKeyList().size() > m - 1) {
+			split(leaf);
 		}
 		return true;
-	}
-
-	private MyBPlusTreeNode findLeafNode(Integer key) {
-		MyBPlusTreeNode node = root;
-		while (!node.isLeaf()) {
-			List<Integer> keys = node.getKeyList();
-			List<MyBPlusTreeNode> children = node.getChildren();
-			int i = 0;
-			while (i < keys.size() && key >= keys.get(i)) {
-				i++;
-			}
-			node = children.get(i);
-		}
-		return node;
-	}
-
-	private void insertIntoParent(MyBPlusTreeNode oldNode, Integer key, MyBPlusTreeNode newNode) {
-		MyBPlusTreeNode parent = oldNode.getParent();
-		if (parent == null) {
-			MyBPlusTreeNode newRoot = new MyBPlusTreeNode(false);
-			newRoot.addKey(key);
-			newRoot.addChild(oldNode);
-			newRoot.addChild(newNode);
-			root = newRoot;
-			oldNode.setParent(newRoot);
-			newNode.setParent(newRoot);
-			return;
-		}
-
-		parent.addKey(key);
-		parent.getChildren().add(parent.getKeyList().indexOf(key) + 1, newNode);
-		newNode.setParent(parent);
-		if (parent.getKeyList().size() >= m) {
-			splitInternalNode(parent);
-		}
-	}
-
-	private void splitLeafNode(MyBPlusTreeNode leaf) {
-		MyBPlusTreeNode newLeaf = new MyBPlusTreeNode(true);
-		int mid = (m + 1) / 2;
-		List<Integer> leafKeys = leaf.getKeyList();
-		newLeaf.getKeyList().addAll(leafKeys.subList(mid, leafKeys.size()));
-		leafKeys.subList(mid, leafKeys.size()).clear();
-
-		newLeaf.setNext(leaf.getNext());
-		leaf.setNext(newLeaf);
-
-		if (leaf == root) {
-			MyBPlusTreeNode newRoot = new MyBPlusTreeNode(false);
-			newRoot.getKeyList().add(newLeaf.getKeyList().get(0));
-			newRoot.getChildren().add(leaf);
-			newRoot.getChildren().add(newLeaf);
-			root = newRoot;
-			leaf.setParent(newRoot);
-			newLeaf.setParent(newRoot);
-		} else {
-			newLeaf.setParent(leaf.getParent());
-			insertIntoParent(leaf, newLeaf.getKeyList().get(0), newLeaf);
-		}
-	}
-
-	private void splitInternalNode(MyBPlusTreeNode node) {
-		MyBPlusTreeNode newInternal = new MyBPlusTreeNode(false);
-		int mid = m / 2;
-		List<Integer> nodeKeys = node.getKeyList();
-		newInternal.getKeyList().addAll(nodeKeys.subList(mid + 1, nodeKeys.size()));
-		nodeKeys.subList(mid + 1, nodeKeys.size()).clear();
-
-		newInternal.getChildren().addAll(node.getChildren().subList(mid + 1, node.getChildren().size()));
-		node.getChildren().subList(mid + 1, node.getChildren().size()).clear();
-
-		for (MyBPlusTreeNode child : newInternal.getChildren()) {
-			child.setParent(newInternal);
-		}
-
-		if (node == root) {
-			MyBPlusTreeNode newRoot = new MyBPlusTreeNode(false);
-			newRoot.getKeyList().add(nodeKeys.remove(mid));
-			newRoot.getChildren().add(node);
-			newRoot.getChildren().add(newInternal);
-			node.setParent(newRoot);
-			newInternal.setParent(newRoot);
-			root = newRoot;
-		} else {
-			insertIntoParent(node, nodeKeys.remove(mid), newInternal);
-		}
 	}
 
 	@Override
 	public boolean remove(Object o) {
-		if (!(o instanceof Integer)) return false;
-		Integer key = (Integer) o;
-		MyBPlusTreeNode node = getNodeForRemove(key);
-		if (node == null) return false;
-
-		node.getKeyList().remove(key);
-		if (node == root) {
-			if (node.getKeyList().isEmpty() && !node.isLeaf()) {
-				root = node.getChildren().isEmpty() ? null : node.getChildren().get(0);
-				if (root != null) root.setParent(null);
-			}
-			return true;
-		}
-
-		// Underflow 처리 필요
-		while (node.getKeyList().size() < (m - 1) / 2) {
-			MyBPlusTreeNode parent = node.getParent();
-			if (parent == null) break; // Parent가 없으면 종료
-
-			int idx = parent.getChildren().indexOf(node);
-			if (idx < 0 || idx >= parent.getChildren().size()) {
-				throw new IndexOutOfBoundsException("Invalid child index");
-			}
-
-			MyBPlusTreeNode sibling;
-			boolean borrowFromLeft = false;
-
-			if (idx > 0 && parent.getChildren().get(idx - 1).getKeyList().size() > (m - 1) / 2) {
-				sibling = parent.getChildren().get(idx - 1);
-				borrowFromLeft = true;
-			} else if (idx < parent.getChildren().size() - 1 && parent.getChildren().get(idx + 1).getKeyList().size() > (m - 1) / 2) {
-				sibling = parent.getChildren().get(idx + 1);
-			} else {
-				if (idx > 0) {
-					sibling = parent.getChildren().get(idx - 1);
-					sibling.getKeyList().addAll(node.getKeyList());
-					if (!node.isLeaf()) {
-						sibling.getChildren().addAll(node.getChildren());
-					}
-					parent.getKeyList().remove(idx - 1);
-					parent.getChildren().remove(idx);
-				} else if (idx < parent.getChildren().size() - 1) {
-					sibling = parent.getChildren().get(idx + 1);
-					node.getKeyList().addAll(sibling.getKeyList());
-					if (!sibling.isLeaf()) {
-						node.getChildren().addAll(sibling.getChildren());
-					}
-					parent.getKeyList().remove(idx);
-					parent.getChildren().remove(idx + 1);
-				} else {
-					break; // No valid sibling to borrow or merge
-				}
-				if (parent == root && parent.getKeyList().isEmpty()) {
-					root = sibling;
-					root.setParent(null);
-				}
-				return true;
-			}
-
-			// Borrow key from sibling
-			if (borrowFromLeft) {
-				node.getKeyList().add(0, parent.getKeyList().get(idx - 1));
-				parent.getKeyList().set(idx - 1, sibling.getKeyList().remove(sibling.getKeyList().size() - 1));
-				if (!sibling.isLeaf()) {
-					node.getChildren().add(0, sibling.getChildren().remove(sibling.getChildren().size() - 1));
-				}
-			} else {
-				node.getKeyList().add(parent.getKeyList().get(idx));
-				parent.getKeyList().set(idx, sibling.getKeyList().remove(0));
-				if (!sibling.isLeaf()) {
-					node.getChildren().add(sibling.getChildren().remove(0));
-				}
-			}
-		}
-		return true;
+		return false;
 	}
 
-	private MyBPlusTreeNode getNodeForRemove(Integer key) {
+	private MyBPlusTreeNode findLeafNode(Integer key) {
 		MyBPlusTreeNode current = root;
 		while (!current.isLeaf()) {
 			List<Integer> keys = current.getKeyList();
@@ -251,93 +98,74 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 			}
 			current = children.get(i);
 		}
+		return current;
+	}
 
-		int idx = Collections.binarySearch(current.getKeyList(), key);
-		if (idx >= 0) {
-			return current;
+	private void split(MyBPlusTreeNode node) {
+		int midIndex = (m + 1) / 2;
+		MyBPlusTreeNode newNode = new MyBPlusTreeNode(node.isLeaf());
+
+		List<Integer> keys = node.getKeyList();
+		List<MyBPlusTreeNode> children = node.getChildren();
+
+		newNode.getKeyList().addAll(keys.subList(midIndex, keys.size()));
+		keys.subList(midIndex, keys.size()).clear();
+
+		if (!node.isLeaf()) {
+			newNode.getChildren().addAll(children.subList(midIndex, children.size()));
+			for (MyBPlusTreeNode child : newNode.getChildren()) {
+				child.setParent(newNode); // 부모 노드 설정
+			}
+			children.subList(midIndex, children.size()).clear();
+		}
+
+		if (node == root) {
+			MyBPlusTreeNode newRoot = new MyBPlusTreeNode(false);
+			newRoot.getKeyList().add(newNode.getKeyList().remove(0));
+			newRoot.getChildren().add(node);
+			newRoot.getChildren().add(newNode);
+			root = newRoot;
+			node.setParent(newRoot); // 부모 노드 설정
+			newNode.setParent(newRoot); // 부모 노드 설정
 		} else {
-			return null;
+			MyBPlusTreeNode parent = node.getParent();
+			parent.addKey(newNode.getKeyList().remove(0));
+			parent.addChild(newNode);
+			newNode.setParent(parent); // 부모 노드 설정
+			if (parent.getKeyList().size() > m - 1) {
+				split(parent);
+			}
 		}
 	}
 
 	@Override
 	public Integer lower(Integer e) {
-		return getLowerOrHigher(e, false);
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public Integer floor(Integer e) {
-		return getFloorOrCeiling(e, false);
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public Integer ceiling(Integer e) {
-		return getFloorOrCeiling(e, true);
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public Integer higher(Integer e) {
-		return getLowerOrHigher(e, true);
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
-	private Integer getFloorOrCeiling(Integer e, boolean isCeiling) {
-		MyBPlusTreeNode current = root;
-		Integer result = null;
-		while (!current.isLeaf()) {
-			List<Integer> keys = current.getKeyList();
-			List<MyBPlusTreeNode> children = current.getChildren();
-			int i = 0;
-			while (i < keys.size() && (isCeiling ? e > keys.get(i) : e >= keys.get(i))) {
-				i++;
-			}
-			current = children.get(i);
-		}
-
-		for (Integer key : current.getKeyList()) {
-			if (isCeiling) {
-				if (key >= e) {
-					result = key;
-					break;
-				}
-			} else {
-				if (key <= e) {
-					result = key;
-				} else {
-					break;
-				}
-			}
-		}
-		return result;
+	@Override
+	public Integer pollFirst() {
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
-	private Integer getLowerOrHigher(Integer e, boolean isHigher) {
-		MyBPlusTreeNode current = root;
-		Integer result = null;
-		while (!current.isLeaf()) {
-			List<Integer> keys = current.getKeyList();
-			List<MyBPlusTreeNode> children = current.getChildren();
-			int i = 0;
-			while (i < keys.size() && (isHigher ? e >= keys.get(i) : e > keys.get(i))) {
-				i++;
-			}
-			current = children.get(i);
-		}
-
-		for (Integer key : current.getKeyList()) {
-			if (isHigher) {
-				if (key > e) {
-					result = key;
-					break;
-				}
-			} else {
-				if (key < e) {
-					result = key;
-				} else {
-					break;
-				}
-			}
-		}
-		return result;
+	@Override
+	public Integer pollLast() {
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
@@ -346,179 +174,103 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 	}
 
 	@Override
-	public Integer first() {
-		MyBPlusTreeNode node = root;
-		while (!node.isLeaf()) {
-			node = node.getChildren().get(0);
-		}
-		return node.getKeyList().get(0);
-	}
-
-	@Override
-	public Integer last() {
-		MyBPlusTreeNode node = root;
-		while (!node.isLeaf()) {
-			node = node.getChildren().get(node.getChildren().size() - 1);
-		}
-		return node.getKeyList().get(node.getKeyList().size() - 1);
-	}
-
-	@Override
-	public int size() {
-		int size = 0;
-		MyBPlusTreeNode node = root;
-		while (!node.isLeaf()) {
-			node = node.getChildren().get(0);
-		}
-		while (node != null) {
-			size += node.getKeyList().size();
-			node = node.getNext();
-		}
-		return size;
-	}
-
-	@Override
-	public boolean isEmpty() {
-		return root.getKeyList().isEmpty();
-	}
-
-	@Override
-	public boolean contains(Object o) {
-		if (!(o instanceof Integer)) return false;
-		Integer key = (Integer) o;
-		return getNode(key) != null;
-	}
-
-	@Override
-	public Iterator<Integer> iterator() {
-		return new BPlusTreeIterator();
-	}
-
-	@Override
-	public Integer pollFirst() {
-		if (isEmpty()) return null;
-		Integer first = first();
-		remove(first);
-		return first;
-	}
-
-	@Override
-	public Integer pollLast() {
-		if (isEmpty()) return null;
-		Integer last = last();
-		remove(last);
-		return last;
-	}
-
-	private class BPlusTreeIterator implements Iterator<Integer> {
-		private MyBPlusTreeNode current;
-		private int index;
-
-		public BPlusTreeIterator() {
-			this.current = root;
-			while (!current.isLeaf()) {
-				current = current.getChildren().get(0);
-			}
-			this.index = 0;
-		}
-
-		@Override
-		public boolean hasNext() {
-			return current != null && index < current.getKeyList().size();
-		}
-
-		@Override
-		public Integer next() {
-			if (!hasNext()) throw new NoSuchElementException();
-			Integer result = current.getKeyList().get(index);
-			index++;
-			if (index >= current.getKeyList().size()) {
-				current = current.getNext();
-				index = 0;
-			}
-			return result;
-		}
-	}
-
-	@Override
-	public NavigableSet<Integer> descendingSet() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public Iterator<Integer> descendingIterator() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public NavigableSet<Integer> subSet(Integer fromElement, boolean fromInclusive, Integer toElement, boolean toInclusive) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public NavigableSet<Integer> headSet(Integer toElement, boolean inclusive) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public NavigableSet<Integer> tailSet(Integer fromElement, boolean inclusive) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
 	public SortedSet<Integer> subSet(Integer fromElement, Integer toElement) {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public SortedSet<Integer> headSet(Integer toElement) {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public SortedSet<Integer> tailSet(Integer fromElement) {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("Not implemented yet.");
+	}
+
+	@Override
+	public Integer first() {
+		throw new UnsupportedOperationException("Not implemented yet.");
+	}
+
+	@Override
+	public Integer last() {
+		throw new UnsupportedOperationException("Not implemented yet.");
+	}
+
+	@Override
+	public int size() {
+		throw new UnsupportedOperationException("Not implemented yet.");
+	}
+
+	@Override
+	public boolean isEmpty() {
+		throw new UnsupportedOperationException("Not implemented yet.");
+	}
+
+	@Override
+	public boolean contains(Object o) {
+		throw new UnsupportedOperationException("Not implemented yet.");
+	}
+
+	@Override
+	public Iterator<Integer> iterator() {
+		throw new UnsupportedOperationException("Not implemented yet.");
+	}
+
+	@Override
+	public NavigableSet<Integer> descendingSet() {
+		return null;
+	}
+
+	@Override
+	public Iterator<Integer> descendingIterator() {
+		return null;
+	}
+
+	@Override
+	public NavigableSet<Integer> subSet(Integer fromElement, boolean fromInclusive, Integer toElement, boolean toInclusive) {
+		return null;
+	}
+
+	@Override
+	public NavigableSet<Integer> headSet(Integer toElement, boolean inclusive) {
+		return null;
+	}
+
+	@Override
+	public NavigableSet<Integer> tailSet(Integer fromElement, boolean inclusive) {
+		return null;
 	}
 
 	@Override
 	public Object[] toArray() {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public <T> T[] toArray(T[] a) {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public boolean containsAll(Collection<?> c) {
-		for (Object o : c) {
-			if (!contains(o)) return false;
-		}
-		return true;
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public boolean addAll(Collection<? extends Integer> c) {
-		boolean modified = false;
-		for (Integer e : c) {
-			if (add(e)) modified = true;
-		}
-		return modified;
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public boolean retainAll(Collection<?> c) {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
 	public boolean removeAll(Collection<?> c) {
-		boolean modified = false;
-		for (Object o : c) {
-			if (remove(o)) modified = true;
-		}
-		return modified;
+		throw new UnsupportedOperationException("Not implemented yet.");
 	}
 
 	@Override
