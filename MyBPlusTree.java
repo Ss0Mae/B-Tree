@@ -15,6 +15,7 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 
 	public MyBPlusTreeNode getNode(Integer key) {
 		MyBPlusTreeNode current = root;
+
 		while (!current.isLeaf()) {
 			List<Integer> keys = current.getKeyList();
 			List<MyBPlusTreeNode> children = current.getChildren();
@@ -22,16 +23,16 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 
 			// 키 비교 및 중간 과정 출력
 			while (i < keys.size() && key >= keys.get(i)) {
+				if (i > 0) {
+					System.out.println("larger than or equal to " + keys.get(i - 1));
+				}
 				i++;
 			}
 
 			if (i < keys.size()) {
 				System.out.println("less than " + keys.get(i));
-			}
-			if (i > 0) {
+			} else if (i > 0) {
 				System.out.println("larger than or equal to " + keys.get(i - 1));
-			} else {
-				System.out.println("larger than or equal to " + keys.get(0));
 			}
 
 			// 다음 노드로 이동
@@ -49,8 +50,28 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 		}
 	}
 
+	public void printTreeStructure() {
+		Queue<MyBPlusTreeNode> queue = new LinkedList<>();
+		queue.add(root);
+		int level = 0;
 
+		while (!queue.isEmpty()) {
+			int levelSize = queue.size();
+			System.out.println("Level " + level + ":");
 
+			for (int i = 0; i < levelSize; i++) {
+				MyBPlusTreeNode node = queue.poll();
+				System.out.print("Node: " + node.getKeyList() + " | ");
+
+				if (!node.isLeaf()) {
+					queue.addAll(node.getChildren());
+				}
+			}
+
+			System.out.println();
+			level++;
+		}
+	}
 
 	public void inorderTraverse() {
 		inorderTraverse(root);
@@ -102,41 +123,50 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 	}
 
 	private void split(MyBPlusTreeNode node) {
-		int midIndex = (m + 1) / 2;
+		int midIndex = (int) Math.ceil((m - 1) / 2.0); // 중간 인덱스 계산
+
 		MyBPlusTreeNode newNode = new MyBPlusTreeNode(node.isLeaf());
 
 		List<Integer> keys = node.getKeyList();
 		List<MyBPlusTreeNode> children = node.getChildren();
 
-		newNode.getKeyList().addAll(keys.subList(midIndex, keys.size()));
-		keys.subList(midIndex, keys.size()).clear();
+		// 새 노드에 키와 자식 노드 할당
+		newNode.getKeyList().addAll(keys.subList(midIndex + 1, keys.size()));
+		keys.subList(midIndex + 1, keys.size()).clear();
 
 		if (!node.isLeaf()) {
-			newNode.getChildren().addAll(children.subList(midIndex, children.size()));
+			newNode.getChildren().addAll(children.subList(midIndex + 1, children.size()));
 			for (MyBPlusTreeNode child : newNode.getChildren()) {
-				child.setParent(newNode); // 부모 노드 설정
+				child.setParent(newNode);
 			}
-			children.subList(midIndex, children.size()).clear();
+			children.subList(midIndex + 1, children.size()).clear();
 		}
+
+		int midKey = keys.get(midIndex); // 중간 인덱스의 키를 부모로 올림
+		keys.remove(midIndex); // 중간 키 제거
 
 		if (node == root) {
 			MyBPlusTreeNode newRoot = new MyBPlusTreeNode(false);
-			newRoot.getKeyList().add(newNode.getKeyList().remove(0));
+			newRoot.getKeyList().add(midKey);
 			newRoot.getChildren().add(node);
 			newRoot.getChildren().add(newNode);
 			root = newRoot;
-			node.setParent(newRoot); // 부모 노드 설정
-			newNode.setParent(newRoot); // 부모 노드 설정
+			node.setParent(newRoot);
+			newNode.setParent(newRoot);
 		} else {
 			MyBPlusTreeNode parent = node.getParent();
-			parent.addKey(newNode.getKeyList().remove(0));
+			parent.addKey(midKey);
 			parent.addChild(newNode);
-			newNode.setParent(parent); // 부모 노드 설정
+			newNode.setParent(parent);
 			if (parent.getKeyList().size() > m - 1) {
 				split(parent);
 			}
 		}
 	}
+
+
+
+
 
 	@Override
 	public Integer lower(Integer e) {

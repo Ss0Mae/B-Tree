@@ -19,6 +19,8 @@ public class App {
             bpTree.add(i);
         }
 
+        bpTree.printTreeStructure();
+
         bpTree.getNode(c1);
         System.out.println();
         bpTree.getNode(c2);

@@ -1,56 +1,18 @@
 package org.dfpl.lecture.database.assignment2.assignment2_20011727;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class MyBPlusTreeNode {
 
-	private MyBPlusTreeNode parent;
 	private List<Integer> keyList;
 	private List<MyBPlusTreeNode> children;
+	private MyBPlusTreeNode parent;
 	private boolean isLeaf;
-	private MyBPlusTreeNode next;
 
 	public MyBPlusTreeNode(boolean isLeaf) {
 		this.isLeaf = isLeaf;
 		this.keyList = new ArrayList<>();
 		this.children = new ArrayList<>();
-	}
-
-	public void addKey(Integer key) {
-		int pos = 0;
-		while (pos < keyList.size() && keyList.get(pos) < key) {
-			pos++;
-		}
-		keyList.add(pos, key);
-	}
-
-	public void addChild(MyBPlusTreeNode child) {
-		if (this.isLeaf) {
-			throw new UnsupportedOperationException("Leaf nodes can't have children");
-		}
-		int pos = 0;
-		while (pos < children.size() && children.get(pos).getKeyList().get(0) < child.getKeyList().get(0)) {
-			pos++;
-		}
-		children.add(pos, child);
-		child.setParent(this);
-	}
-
-	public void setParent(MyBPlusTreeNode parent) {
-		this.parent = parent;
-	}
-
-	public MyBPlusTreeNode getParent() {
-		return parent;
-	}
-
-	public MyBPlusTreeNode getNext() {
-		return next;
-	}
-
-	public void setNext(MyBPlusTreeNode next) {
-		this.next = next;
 	}
 
 	public List<Integer> getKeyList() {
@@ -61,7 +23,25 @@ public class MyBPlusTreeNode {
 		return children;
 	}
 
+	public MyBPlusTreeNode getParent() {
+		return parent;
+	}
+
+	public void setParent(MyBPlusTreeNode parent) {
+		this.parent = parent;
+	}
+
 	public boolean isLeaf() {
 		return isLeaf;
+	}
+
+	public void addKey(Integer key) {
+		keyList.add(key);
+		Collections.sort(keyList);
+	}
+
+	public void addChild(MyBPlusTreeNode child) {
+		children.add(child);
+		Collections.sort(children, Comparator.comparingInt(a -> a.getKeyList().get(0)));
 	}
 }
