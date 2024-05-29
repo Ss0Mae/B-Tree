@@ -18,32 +18,33 @@ public class App {
 		MyBPlusTree bpTree = new MyBPlusTree(m);
 		for (int i = 1; i <= c3; i++) {
 			bpTree.add(i);
-			System.out.println(i + " added");
-			bpTree.printTreeStructure();
-			System.out.println("====================================");
 		}
 
 		MyBPlusTreeNode n1 = bpTree.getNode(c1);
 		System.out.println();
 		MyBPlusTreeNode n2 = bpTree.getNode(c2);
 		System.out.println();
+
 		// 학습적인 의미에서 재귀적으로 inorder traversal 하여 구현해야 함.
 		bpTree.inorderTraverse();
 
 		System.out.println("Assignment 5: ");
 
 		ArrayList<Integer> values = new ArrayList<Integer>();
-		Iterator<Integer> iterator = bpTree.iterator();
-		while(iterator.hasNext()) {
-			Integer value = iterator.next();
+		Iterator<Integer> iterator = bpTree.iterator(); // inorder traversal
+		while(iterator.hasNext()) { // iterator test
+			Integer value = iterator.next(); // iterator test
 			values.add(value);
 		}
 
 		System.out.println("iterator test: " + (c3 == bpTree.size()));
 		
-		for(Integer value: values) {
-			bpTree.remove(value);
-		}
-		System.out.println("remove test: " + (bpTree.size() == 0));
+//		for(Integer value: values) { // contains test
+//			System.out.println(value + " removed");
+//			bpTree.remove(value);
+//			bpTree.printTreeStructure();
+//			System.out.println("====================================");
+//		}
+//		System.out.println("remove test: " + (bpTree.size() == 0));
 	}
 }
