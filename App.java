@@ -27,7 +27,6 @@ public class App {
 
 		// 학습적인 의미에서 재귀적으로 inorder traversal 하여 구현해야 함.
 		bpTree.inorderTraverse();
-
 		System.out.println("Assignment 5: ");
 
 		ArrayList<Integer> values = new ArrayList<Integer>();
@@ -38,13 +37,15 @@ public class App {
 		}
 
 		System.out.println("iterator test: " + (c3 == bpTree.size()));
-		
-//		for(Integer value: values) { // contains test
-//			System.out.println(value + " removed");
-//			bpTree.remove(value);
-//			bpTree.printTreeStructure();
-//			System.out.println("====================================");
-//		}
-//		System.out.println("remove test: " + (bpTree.size() == 0));
+
+		System.out.println("Original Tree Structre:");
+		bpTree.printTreeStructure();
+		for(Integer value: values) { // contains test
+			System.out.println(value + " removed start");
+			bpTree.remove(value);
+			bpTree.printTreeStructure();
+			System.out.println("====================================");
+		}
+		System.out.println("remove test: " + (bpTree.size() == 0));
 	}
 }

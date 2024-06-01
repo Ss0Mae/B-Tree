@@ -4,12 +4,14 @@ import java.util.*;
 
 public class MyBPlusTree implements NavigableSet<Integer> {
 
+	private final int min_key;
 	private MyBPlusTreeNode root;
 	private int m; // 최대 자식 노드 수
 
 	public MyBPlusTree(int m) {
 		this.root = new MyBPlusTreeNode(true, m); // root 생성
 		this.m = m;
+		this.min_key = (m % 2 == 0) ? (m / 2) - 1 : m / 2;
 	}
 
 	public void add(int key) { // key를 추가하는 메소드
@@ -217,20 +219,6 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 		return true;
 	}
 
-	@Override
-	public boolean remove(Object o) { // o를 삭제하는 메소드
-		remove(root, (Integer) o);
-		if (root.keys.size() == 0) {  // root의 key가 비어있으면
-			if (!root.isLeaf) {
-				root = root.children.get(0); // root가 leaf 노드가 아니면 root를 자식 노드로 변경
-			} else {
-				root = null; // root가 leaf 노드이면 root를 null로 변경
-			}
-		}
-		return true;
-	}
-
-
 	private int findKey(MyBPlusTreeNode node, int key) {
 		int idx = 0;
 		while (idx < node.keys.size() && node.keys.get(idx) < key) {
@@ -238,63 +226,11 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 		}
 		return idx;
 	}
-	private void remove(MyBPlusTreeNode node, int key) {
-		int idx = findKey(node, key);
-
-		if (idx < node.keys.size() && node.keys.get(idx) == key) {
-			if (node.isLeaf) {
-				removeFromLeaf(node, idx);
-			} else {
-				removeFromNonLeaf(node, idx);
-			}
-		} else {
-			if (node.isLeaf) {
-				System.out.println("The key " + key + " does not exist in the tree.");
-				return;
-			}
-
-			boolean flag = (idx == node.keys.size());
-
-			if (node.children.get(idx).keys.size() < (m + 1) / 2) {
-				fill(node, idx);
-			}
-
-			if (flag && idx > node.keys.size()) {
-				remove(node.children.get(idx - 1), key);
-			} else {
-				remove(node.children.get(idx), key);
-			}
-		}
-	}
-
-	private void removeFromLeaf(MyBPlusTreeNode node, int idx) {
-		for (int i = idx + 1; i < node.keys.size(); i++) {
-			node.keys.set(i - 1, node.keys.get(i));
-		}
-		node.keys.remove(node.keys.size() - 1);
-	}
-
-	private void removeFromNonLeaf(MyBPlusTreeNode node, int idx) {
-		int key = node.keys.get(idx);
-
-		if (node.children.get(idx).keys.size() >= (m + 1) / 2) {
-			int pred = getPred(node, idx);
-			node.keys.set(idx, pred);
-			remove(node.children.get(idx), pred);
-		} else if (node.children.get(idx + 1).keys.size() >= (m + 1) / 2) {
-			int succ = getSucc(node, idx);
-			node.keys.set(idx, succ);
-			remove(node.children.get(idx + 1), succ);
-		} else {
-			merge(node, idx);
-			remove(node.children.get(idx), key);
-		}
-	}
 
 	private int getPred(MyBPlusTreeNode node, int idx) {
 		MyBPlusTreeNode current = node.children.get(idx);
 		while (!current.isLeaf) {
-			current = current.children.get(current.keys.size());
+			current = current.children.get(current.keys.size()-1);
 		}
 		return current.keys.get(current.keys.size() - 1);
 	}
@@ -307,15 +243,124 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 		return current.keys.get(0);
 	}
 
+	@Override
+	public boolean remove(Object o) {
+		Integer key = (Integer) o;
+		if (root == null) { // 루트가 null이면 트리가 비어있음
+			return false;
+		}
+
+		remove(root, key);
+
+		if (root.keys.size() == 0) { // root의 key가 비어있으면
+			if (root.children.size() == 0) { // root가 leaf 노드이면
+				root = null; // root를 null로 변경
+			} else { // root가 leaf 노드가 아니면
+				root = root.children.get(0); // root를 자식 노드로 변경
+			}
+		}
+
+		return true;
+	}
+
+	private void remove(MyBPlusTreeNode node, int key) {
+		int idx = findKey(node, key);
+
+		if (idx < node.keys.size() && node.keys.get(idx) == key) { // key를 찾은 경우
+			if (node.isLeaf) {
+				removeFromLeaf(node, idx);
+			} else {
+				removeFromNonLeaf(node, idx);
+			}
+		} else { // key를 찾지 못한 경우
+			if (node.isLeaf) {
+				System.out.println("The key " + key + " does not exist in the tree.");
+				return;
+			}
+
+			boolean flag = (idx == node.keys.size()); // idx가 마지막 인덱스인지 확인
+
+			if (node.children.get(idx).keys.size() < min_key) { // idx번째 자식 노드의 key 개수가 min_key보다 작은 경우
+				fill(node, idx); // idx번째 자식 노드를 채움
+			}
+
+			// fill 후 마지막 자식 노드가 병합되어 idx가 변경될 수 있음
+			if (flag && idx > node.keys.size()) { // idx가 마지막 인덱스보다 큰 경우
+				remove(node.children.get(idx - 1), key); // idx-1번째 자식 노드에서 key를 삭제
+			} else {
+				remove(node.children.get(idx), key); // idx번째 자식 노드에서 key를 삭제
+			}
+		}
+
+		// 루트 노드가 비어있는 경우
+		if (node == root && node.keys.size() == 0) { // 루트 노드가 비어있는 경우
+			if (node.children.size() == 0) { // 루트 노드가 리프 노드인 경우
+				root = null; // 트리가 비어있음
+			} else {
+				root = node.children.get(0); // 루트 노드를 자식 노드로 대체
+			}
+		}
+	}
+
+	private void removeFromLeaf(MyBPlusTreeNode node, int idx) {
+		for (int i = idx + 1; i < node.keys.size(); i++) {
+			node.keys.set(i - 1, node.keys.get(i));
+		}
+		node.keys.remove(node.keys.size() - 1);
+
+		// 리프 노드에서 삭제 후 최소 키 개수 조건을 확인
+		if (node != root && node.keys.size() < min_key) {
+			MyBPlusTreeNode parent = findParent(root, node);
+			int childIndex = parent.children.indexOf(node);
+			fill(parent, childIndex);
+		}
+	}
+
+	private void removeFromNonLeaf(MyBPlusTreeNode node, int idx) {
+		int key = node.keys.get(idx);
+
+		if (node.children.get(idx).keys.size() >= min_key ) {
+			int pred = getPred(node, idx);
+			node.keys.set(idx, pred);
+			remove(node.children.get(idx), pred);
+		} else if (node.children.get(idx + 1).keys.size() >= min_key) {
+			int succ = getSucc(node, idx);
+			node.keys.set(idx, succ);
+			remove(node.children.get(idx + 1), succ);
+		} else {
+			merge(node, idx);
+			remove(node.children.get(idx), key);
+		}
+	}
+
+	private MyBPlusTreeNode findParent(MyBPlusTreeNode current, MyBPlusTreeNode child) {
+		if (current.isLeaf || current.children.contains(child)) {
+			return current;
+		}
+
+		for (MyBPlusTreeNode node : current.children) {
+			MyBPlusTreeNode result = findParent(node, child);
+			if (result != null) {
+				return result;
+			}
+		}
+
+		return null;
+	}
+
 	private void fill(MyBPlusTreeNode node, int idx) {
-		if (idx != 0 && node.children.get(idx - 1).keys.size() >= (m + 1) / 2) {
+		if (idx != 0 && node.children.get(idx - 1).keys.size() >= min_key) {
+			System.out.println("Borrowing from previous sibling of node at index " + idx);
 			borrowFromPrev(node, idx);
-		} else if (idx != node.keys.size() && node.children.get(idx + 1).keys.size() >= (m + 1) / 2) {
+		} else if (idx != node.keys.size() && node.children.get(idx + 1).keys.size() >= min_key) {
+			System.out.println("Borrowing from next sibling of node at index " + idx);
 			borrowFromNext(node, idx);
 		} else {
 			if (idx != node.keys.size()) {
+				System.out.println("Merging node at index " + idx + " with its next sibling");
 				merge(node, idx);
 			} else {
+				System.out.println("Merging node at index " + (idx - 1) + " with its current sibling");
 				merge(node, idx - 1);
 			}
 		}
@@ -326,28 +371,46 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 		MyBPlusTreeNode sibling = node.children.get(idx - 1);
 
 		child.keys.add(0, node.keys.get(idx - 1));
+		node.keys.set(idx - 1, sibling.keys.get(sibling.keys.size() - 1));
+
 		if (!child.isLeaf) {
 			child.children.add(0, sibling.children.remove(sibling.children.size() - 1));
 		}
 
-		node.keys.set(idx - 1, sibling.keys.remove(sibling.keys.size() - 1));
+		sibling.keys.remove(sibling.keys.size() - 1);
 	}
 
 	private void borrowFromNext(MyBPlusTreeNode node, int idx) {
 		MyBPlusTreeNode child = node.children.get(idx);
 		MyBPlusTreeNode sibling = node.children.get(idx + 1);
 
+		System.out.println("Before borrowing from next sibling:");
+		System.out.println("Child keys: " + child.keys);
+		System.out.println("Sibling keys: " + sibling.keys);
+
+		// 부모 노드의 키를 자식 노드의 끝에 추가
 		child.keys.add(node.keys.get(idx));
+		// 부모 노드의 키를 형제 노드의 첫 번째 키로 대체
+		node.keys.set(idx, sibling.keys.get(0));
+		// 형제 노드의 첫 번째 키를 삭제
+		sibling.keys.remove(0);
+		// 형제 노드의 자식을 자식 노드로 이동
 		if (!child.isLeaf) {
 			child.children.add(sibling.children.remove(0));
 		}
 
-		node.keys.set(idx, sibling.keys.remove(0));
+		System.out.println("After borrowing from next sibling:");
+		System.out.println("Child keys: " + child.keys);
+		System.out.println("Sibling keys: " + sibling.keys);
 	}
 
 	private void merge(MyBPlusTreeNode node, int idx) {
 		MyBPlusTreeNode child = node.children.get(idx);
 		MyBPlusTreeNode sibling = node.children.get(idx + 1);
+
+		System.out.println("Before merging nodes at index " + idx + " and " + (idx + 1) + ":");
+		System.out.println("Child keys: " + child.keys);
+		System.out.println("Sibling keys: " + sibling.keys);
 
 		if (!child.isLeaf) {
 			child.keys.add(node.keys.get(idx));
@@ -366,40 +429,50 @@ public class MyBPlusTree implements NavigableSet<Integer> {
 		node.keys.remove(idx);
 		node.children.remove(idx + 1);
 
-		if (node == root && node.keys.size() == 0) {
-			root = child;
+		System.out.println("After merging:");
+		System.out.println("Child keys: " + child.keys);
+		System.out.println("Sibling is removed. Parent keys: " + node.keys);
+
+		// 부모 노드가 최소 키 개수 조건을 만족하는지 확인
+		if (node != root && node.keys.size() < min_key) {
+			MyBPlusTreeNode parent = findParent(root, node);
+			int parentIndex = parent.children.indexOf(node);
+			fill(parent, parentIndex);
 		}
 	}
 
-//	public void printTreeStructure() { // B+ 트리의 구조를 출력
-//		if (root == null) {
-//			System.out.println("The tree is empty.");
-//			return;
-//		}
-//
-//		Queue<MyBPlusTreeNode> queue = new LinkedList<>();
-//		queue.add(root);
-//
-//		while (!queue.isEmpty()) {
-//			int levelSize = queue.size();
-//			while (levelSize > 0) {
-//				MyBPlusTreeNode node = queue.poll();
-//				System.out.print("[");
-//				for (int i = 0; i < node.keys.size(); i++) {
-//					System.out.print(node.keys.get(i));
-//					if (i < node.keys.size() - 1) {
-//						System.out.print(", ");
-//					}
-//				}
-//				System.out.print("] ");
-//				if (!node.isLeaf) {
-//					queue.addAll(node.children);
-//				}
-//				levelSize--;
-//			}
-//			System.out.println();
-//		}
-//	}
+
+
+
+	public void printTreeStructure() { // B+ 트리의 구조를 출력
+		if (root == null) {
+			System.out.println("The tree is empty.");
+			return;
+		}
+
+		Queue<MyBPlusTreeNode> queue = new LinkedList<>();
+		queue.add(root);
+
+		while (!queue.isEmpty()) {
+			int levelSize = queue.size();
+			while (levelSize > 0) {
+				MyBPlusTreeNode node = queue.poll();
+				System.out.print("[");
+				for (int i = 0; i < node.keys.size(); i++) {
+					System.out.print(node.keys.get(i));
+					if (i < node.keys.size() - 1) {
+						System.out.print(", ");
+					}
+				}
+				System.out.print("] ");
+				if (!node.isLeaf) {
+					queue.addAll(node.children);
+				}
+				levelSize--;
+			}
+			System.out.println();
+		}
+	}
 
 	@Override
 	public boolean containsAll(Collection<?> c) {
